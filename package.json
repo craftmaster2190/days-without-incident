@@ -9,9 +9,7 @@
     "canvas": "^2.9.1",
     "express": "^4.18.1",
     "http-status-codes": "^2.2.0",
-    "moment": "^2.29.3"
-  },
-  "devDependencies": {
+    "moment": "^2.29.3",
     "@types/express": "^4.17.13",
     "@types/moment": "^2.13.0",
     "@types/node": "^17.0.42",

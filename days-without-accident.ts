@@ -3,7 +3,7 @@ import {StatusCodes} from "http-status-codes"
 import moment from "moment";
 
 const app = require('express')();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.get(/^\/(\d+)-days-without-incident\.png/, (request, response) => {
     const canvas = daysWithoutIncidentPngBuffer(request.params[0])
