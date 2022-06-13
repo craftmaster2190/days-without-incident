@@ -2,7 +2,7 @@
   "name": "days-without-incident",
   "version": "1.0.0",
   "scripts": {
-    "serve-nodemon": "nodemon days-without-accident.ts",
+    "serve": "nodemon days-without-accident.ts",
     "start": "ts-node days-without-accident.ts"
   },
   "dependencies": {

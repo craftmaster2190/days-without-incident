@@ -5,28 +5,78 @@ import moment from "moment";
 const app = require('express')();
 const port = process.env.PORT || 3000;
 
+app.use((request, response, next) => {
+    console.log("user-agent and ip", request.headers["user-agent"], request.headers["x-forwarded-for"] || request.ip)
+    next()
+})
+
+app.get("/", (request, response) => {
+    response.status(StatusCodes.OK)
+        .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
+        .header("Content-Type", "text/html")
+        .header('Access-Control-Allow-Origin', '*')
+        .end(
+            `<!DOCTYPE html>
+<html lang="en">
+<body>
+    <h1>Days Without Incident API</h1>
+    <div>
+        Generates # Days Without Incident png images and opengraph links.
+    </div>
+    <h2>Examples:</h2>
+    <div>
+        <a href="/4-days-without-incident.png">4-days-without-incident.png</a><br>
+        <a href="/2022-06-09-last-incident.png">2022-06-09-last-incident.png</a><br>
+        <a href="/2022-06-09-last-incident-preview">2022-06-09-last-incident-preview</a>
+    </div>
+</body>
+</html>`)
+})
+
 app.get(/^\/(\d+)-days-without-incident\.png/, (request, response) => {
     const canvas = daysWithoutIncidentPngBuffer(request.params[0])
 
-    response.status(StatusCodes.CREATED)
+    response.status(StatusCodes.OK)
         .header("Content-Type", "image/png")
+        .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
+        .header('Access-Control-Allow-Origin', '*')
         .end(canvas.toBuffer('image/png'))
 })
 
 app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident\.png/, (request, response) => {
-    const date = moment(request.params[0])
-    console.log("date=" + date.format())
-
-    const duration = moment.duration(moment().diff(date))
-    let durationDays = Math.floor(duration.asDays());
-    console.log("duration=" + duration + " days= " + durationDays)
-
+    const durationDays = Math.floor(moment.duration(moment().diff(moment(request.params[0]))).asDays());
     const canvas = daysWithoutIncidentPngBuffer(durationDays)
 
-    response.status(StatusCodes.CREATED)
+    response.status(StatusCodes.OK)
         .header("Content-Type", "image/png")
         .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
-        .end(canvas.toBuffer('image/png'))
+        .header('Access-Control-Allow-Origin', '*')
+        .end(canvas.toBuffer('image/png'), 'binary')
+})
+
+app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident-preview\/?/, (request, response) => {
+    const durationDays = Math.floor(moment.duration(moment().diff(moment(request.params[0]))).asDays());
+
+    response.status(StatusCodes.OK)
+        .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
+        .header("Content-Type", "text/html")
+        .end(
+            `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>${durationDays} Days Without Incident</title>
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident-preview">
+    <meta property="og:title" content="${durationDays} Days Without Incident">
+    <meta property="og:description" content="${durationDays} Days Without Incident">
+    <meta property="og:image" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident.png">
+</head>
+<body>
+    <a href="/">Home</a><br>
+    <img src="/${request.params[0]}-last-incident.png" 
+         alt="${durationDays} Days Without Incident">
+</body>
+</html>`)
 })
 
 function daysWithoutIncidentPngBuffer(days: number) {
