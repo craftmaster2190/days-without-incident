@@ -1,6 +1,6 @@
 import {createCanvas} from "canvas";
 import {StatusCodes} from "http-status-codes"
-import moment from "moment";
+import moment from "moment-timezone";
 
 const app = require('express')();
 const port = process.env.PORT || 3000;
@@ -43,9 +43,20 @@ app.get(/^\/(\d+)-days-without-incident\.png/, (request, response) => {
         .end(canvas.toBuffer('image/png'))
 })
 
+function getDurationDays(dateString) {
+    const today = moment().tz("America/Denver").startOf('day');
+    const date = moment(dateString).tz("America/Denver");
+    const duration = moment.duration(today.diff(date));
+    const days = duration.asDays();
+    console.log("today=" + today.format(),
+        "date=" + date.format(),
+        "duration=" + duration.toISOString(),
+        "days=" + days)
+    return Math.floor(days);
+}
+
 app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident\.png/, (request, response) => {
-    const durationDays = Math.floor(moment.duration(moment().diff(moment(request.params[0]))).asDays());
-    const canvas = daysWithoutIncidentPngBuffer(durationDays)
+    const canvas = daysWithoutIncidentPngBuffer(getDurationDays(request.params[0]))
 
     response.status(StatusCodes.OK)
         .header("Content-Type", "image/png")
@@ -55,7 +66,7 @@ app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident\.png/, (request, response) => {
 })
 
 app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident-preview\/?/, (request, response) => {
-    const durationDays = Math.floor(moment.duration(moment().diff(moment(request.params[0]))).asDays());
+    const durationDays = getDurationDays(request.params[0]);
 
     response.status(StatusCodes.OK)
         .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
@@ -89,6 +100,8 @@ function daysWithoutIncidentPngBuffer(days: number) {
     const margin = 10
 
     // Big rectangle
+    context.fillStyle = '#FFFFFF'
+    roundRect(context, margin, margin, width - (margin * 2), height - (margin * 2), 50, true);
     roundRect(context, margin, margin, width - (margin * 2), height - (margin * 2), 50);
 
     const daysCenterX = width * (1 / 3)
