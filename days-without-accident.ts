@@ -27,7 +27,9 @@ app.get("/", (request, response) => {
     <div>
         <a href="/4-days-without-incident.png">4-days-without-incident.png</a><br>
         <a href="/2022-06-09-last-incident.png">2022-06-09-last-incident.png</a><br>
-        <a href="/2022-06-09-last-incident-preview">2022-06-09-last-incident-preview</a>
+        <a href="/2022-06-09-last-incident-preview">2022-06-09-last-incident-preview</a><br>
+        <a href="/2022-06-09-last-incident-preview?tz=America/Chicago">2022-06-09-last-incident-preview?tz=America/Chicago</a>
+        <small>Defaults to America/Denver</small>
     </div>
 </body>
 </html>`)
@@ -43,12 +45,18 @@ app.get(/^\/(\d+)-days-without-incident\.png/, (request, response) => {
         .end(canvas.toBuffer('image/png'))
 })
 
-function getDurationDays(dateString) {
-    const today = moment().tz("America/Denver").startOf('day');
-    const date = moment(dateString).tz("America/Denver");
+function getDurationDays(dateString: string, timezone: string) {
+    if (!timezone) {
+        timezone = "America/Denver"
+    }
+
+    const today = moment().tz(timezone).startOf('day');
+    const date = moment.tz(dateString, timezone);
     const duration = moment.duration(today.diff(date));
     const days = duration.asDays();
-    console.log("today=" + today.format(),
+    console.log(
+        "timezone=" + timezone,
+        "today=" + today.format(),
         "date=" + date.format(),
         "duration=" + duration.toISOString(),
         "days=" + days)
@@ -56,7 +64,7 @@ function getDurationDays(dateString) {
 }
 
 app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident\.png/, (request, response) => {
-    const canvas = daysWithoutIncidentPngBuffer(getDurationDays(request.params[0]))
+    const canvas = daysWithoutIncidentPngBuffer(getDurationDays(request.params[0], request.query["tz"]))
 
     response.status(StatusCodes.OK)
         .header("Content-Type", "image/png")
@@ -66,7 +74,9 @@ app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident\.png/, (request, response) => {
 })
 
 app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident-preview\/?/, (request, response) => {
-    const durationDays = getDurationDays(request.params[0]);
+    const durationDays = getDurationDays(request.params[0], request.query["tz"]);
+
+    const timezoneQueryString = request.query['tz'] ? `?tz=${request.query['tz']}` : ""
 
     response.status(StatusCodes.OK)
         .header("Cache-Control", "max-age=" + moment.duration(10, "minute").asSeconds())
@@ -77,14 +87,14 @@ app.get(/^\/(\d{4}-\d{2}-\d{2})-last-incident-preview\/?/, (request, response) =
 <head>
     <title>${durationDays} Days Without Incident</title>
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident-preview">
+    <meta property="og:url" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident-preview${timezoneQueryString}">
     <meta property="og:title" content="${durationDays} Days Without Incident">
     <meta property="og:description" content="${durationDays} Days Without Incident">
-    <meta property="og:image" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident.png">
+    <meta property="og:image" content="https://days-since-incident.herokuapp.com/${request.params[0]}-last-incident.png${timezoneQueryString}">
 </head>
 <body>
     <a href="/">Home</a><br>
-    <img src="/${request.params[0]}-last-incident.png" 
+    <img src="/${request.params[0]}-last-incident.png${timezoneQueryString}" 
          alt="${durationDays} Days Without Incident">
 </body>
 </html>`)
